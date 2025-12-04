@@ -1,0 +1,249 @@
+/* assets/css/admin.css */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+/* --- 1. VARIABEL & RESET --- */
+:root {
+    --primary-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); /* Navy Premium */
+    --primary-color: #2563eb;
+    --light-bg: #f8fafc;
+    --sidebar-width: 260px;
+    --text-dark: #1e293b;
+    --text-gray: #64748b;
+    --card-shadow: 0 10px 30px rgba(0,0,0,0.04);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; text-decoration: none; list-style: none; }
+
+body { background-color: var(--light-bg); display: flex; min-height: 100vh; overflow-x: hidden; }
+
+/* --- 2. SIDEBAR --- */
+.sidebar {
+    width: var(--sidebar-width);
+    background: var(--primary-gradient);
+    color: white;
+    position: fixed;
+    height: 100%;
+    transition: all 0.3s;
+    z-index: 100;
+    box-shadow: 5px 0 15px rgba(0,0,0,0.1);
+}
+
+.sidebar-brand {
+    padding: 2rem 1.5rem;
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    display: flex; align-items: center; gap: 10px;
+}
+
+.sidebar-menu { padding: 1.5rem 1rem; }
+.sidebar-menu li { margin-bottom: 0.5rem; }
+
+.sidebar-menu a {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    color: rgba(255,255,255,0.7);
+    font-size: 0.95rem;
+    border-radius: 10px;
+    transition: 0.3s;
+    font-weight: 500;
+}
+
+.sidebar-menu a i { font-size: 1.2rem; margin-right: 12px; }
+
+.sidebar-menu a:hover, .sidebar-menu a.active {
+    background-color: rgba(255,255,255,0.15); /* Glass effect */
+    color: white;
+    backdrop-filter: blur(5px);
+    transform: translateX(5px);
+}
+
+/* --- 3. MAIN CONTENT --- */
+.main-content {
+    margin-left: var(--sidebar-width);
+    width: calc(100% - var(--sidebar-width));
+    padding: 2.5rem;
+    transition: all 0.3s;
+}
+
+/* Header Dashboard */
+.header-dash {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 2.5rem;
+    animation: fadeInDown 0.6s ease;
+}
+
+.welcome-text h1 { color: #1e3a8a; font-size: 1.8rem; margin-bottom: 5px; font-weight: 700; }
+.welcome-text p { color: var(--text-gray); }
+
+.date-display { 
+    background: white; padding: 10px 20px; border-radius: 30px; 
+    font-weight: 500; color: #64748b; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.03); 
+    display: flex; align-items: center; gap: 8px; border: 1px solid #f1f5f9;
+}
+
+/* --- 4. KARTU STATISTIK --- */
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    animation: fadeInUp 0.8s ease;
+}
+
+.card {
+    background: white;
+    padding: 1.8rem;
+    border-radius: 16px;
+    box-shadow: var(--card-shadow);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: 0.3s;
+    border: 1px solid #f1f5f9;
+}
+
+.card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(37, 99, 235, 0.1);
+    border-color: #bfdbfe;
+}
+
+.card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.card-head span { color: var(--text-gray); font-size: 0.9rem; font-weight: 500; }
+.card-body h3 { font-size: 2.2rem; color: var(--text-dark); margin-bottom: 5px; font-weight: 700; }
+.card-body small { font-size: 0.85rem; color: #94a3b8; }
+
+/* Warna Icon Kartu */
+.icon-box { width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+.blue { background: #eff6ff; color: #2563eb; }
+.green { background: #dcfce7; color: #16a34a; }
+.purple { background: #f3e8ff; color: #9333ea; }
+.orange { background: #ffedd5; color: #ea580c; }
+
+/* --- 5. TABEL MODERN (BOOKING TERBARU) --- */
+.recent-section { 
+    background: white; 
+    padding: 2rem; 
+    border-radius: 16px; 
+    margin-top: 2rem; 
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    border: 1px solid #f1f5f9;
+    animation: fadeInUp 1s ease;
+}
+
+.section-header { 
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; 
+}
+.section-header h3 { color: #1e293b; font-size: 1.1rem; font-weight: 600; }
+
+.btn-sm { 
+    background: #f1f5f9; color: #475569; padding: 6px 15px; 
+    border-radius: 8px; font-size: 0.85rem; transition: 0.3s; font-weight: 500;
+}
+.btn-sm:hover { background: #e2e8f0; color: #1e293b; }
+
+.table-responsive { overflow-x: auto; }
+.table-custom { width: 100%; border-collapse: separate; border-spacing: 0; }
+
+/* Header Tabel */
+.table-custom th { 
+    text-align: left; padding: 1rem 1.5rem; 
+    background: #f8fafc; color: #64748b; font-weight: 600; 
+    font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; 
+    border-bottom: 1px solid #e2e8f0;
+}
+.table-custom th:first-child { border-top-left-radius: 10px; border-bottom-left-radius: 10px; }
+.table-custom th:last-child { border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
+
+/* Isi Tabel */
+.table-custom td { 
+    padding: 1.2rem 1.5rem; border-bottom: 1px solid #f1f5f9; 
+    color: #1e293b; font-size: 0.95rem; vertical-align: middle; 
+}
+.table-custom tr:last-child td { border-bottom: none; }
+.table-custom tr:hover td { background-color: #f8fafc; transition: 0.2s; }
+
+/* Styling Info Klien (Avatar + Nama) */
+.client-info { display: flex; align-items: center; gap: 15px; }
+.client-avatar {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: bold; font-size: 1.1rem;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+}
+.client-info strong { display: block; font-size: 1rem; color: #0f172a; margin-bottom: 3px; }
+.booking-code { 
+    font-size: 0.75rem; color: #64748b; background: #f1f5f9; 
+    padding: 2px 8px; border-radius: 4px; font-family: monospace; letter-spacing: 1px;
+}
+
+/* Tombol Aksi Bulat */
+.btn-icon-circle {
+    width: 35px; height: 35px; background: #f1f5f9; color: #94a3b8;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    transition: 0.3s; font-size: 1.2rem; margin-left: auto;
+}
+.btn-icon-circle:hover {
+    background: #2563eb; color: white; transform: translateX(3px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+/* Badge Status Modern */
+.badge { padding: 6px 12px; border-radius: 30px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; }
+.badge-green { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+.badge-orange { background: #ffedd5; color: #9a3412; border: 1px solid #fed7aa; }
+.badge-red { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+
+/* --- 6. FOOTER --- */
+.footer {
+    margin-top: 4rem; padding-top: 2rem; border-top: 1px solid #e2e8f0;
+    text-align: center; color: #94a3b8; font-size: 0.9rem;
+}
+.credits { margin-top: 8px; }
+.credits a { color: #2563eb; font-weight: 600; text-decoration: none; transition: 0.3s; }
+.credits a:hover { color: #1e3a8a; text-decoration: underline; }
+
+/* --- 7. FORM & TOMBOL UMUM (Dipakai di halaman lain) --- */
+.form-group { margin-bottom: 1.2rem; }
+.form-group label { display: block; margin-bottom: 0.5rem; color: #334155; font-weight: 500; }
+.form-group input, .form-group textarea, .form-group select {
+    width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem; transition: 0.3s;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    border-color: var(--primary-color); outline: none;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+.btn-primary { 
+    background: var(--primary-color); color: white; padding: 10px 20px; 
+    border-radius: 8px; font-weight: 500; display: inline-flex; align-items: center; gap: 8px; border: none; cursor: pointer; transition: 0.3s; 
+}
+.btn-primary:hover { background: #1d4ed8; transform: translateY(-2px); }
+.alert { padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid transparent; }
+.alert-danger { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+
+/* --- 8. MOBILE RESPONSIVE --- */
+@media (max-width: 768px) {
+    .sidebar { left: -260px; }
+    .sidebar.active { left: 0; }
+    .main-content { margin-left: 0; width: 100%; padding: 1.5rem; }
+    .header-dash { flex-direction: column; align-items: flex-start; gap: 15px; }
+    
+    .sidebar-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5); z-index: 99; display: none;
+    }
+    .sidebar-overlay.active { display: block; }
+    .menu-toggle { display: block; font-size: 1.5rem; margin-right: 15px; cursor: pointer; color: #334155; }
+}
+
+/* Animasi */
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
