@@ -6,56 +6,78 @@ include 'includes/sidebar.php';
 
 // --- LOGIKA WORKFLOW (HANDLER POST) ---
 
-// A. Verifikasi Pembayaran & Konfirmasi Booking
+// A. Verifikasi Pembayaran oleh Admin
 if(isset($_POST['step_verifikasi'])){
-    $id = $_POST['id'];
-    $payment_status = $_POST['payment_status']; 
+    $id = mysqli_real_escape_string($koneksi, $_POST['id']);
+    $payment_status = mysqli_real_escape_string($koneksi, $_POST['payment_status']); // Confirmed DP atau Confirmed Full
+    $waktu = date('Y-m-d H:i:s');
     
-    // Update status bayar & status acara maju ke langkah berikutnya
-    $query = "UPDATE bookings SET payment_status = '$payment_status', status = 'Menunggu Jadwal TM' WHERE id = '$id'";
+    $query = "UPDATE bookings SET 
+              payment_status = '$payment_status', 
+              status = 'Menunggu Jadwal TM',
+              admin_verified_at = '$waktu'
+              WHERE id = '$id'";
+    
     mysqli_query($koneksi, $query);
-    echo "<script>alert('Booking Dikonfirmasi! Silakan atur jadwal TM.'); window.location='booking.php';</script>";
+    echo "<script>alert('Pembayaran Diverifikasi! Silakan atur jadwal TM.'); window.location='booking.php';</script>";
 }
 
 // B. Atur Jadwal TM
 if(isset($_POST['step_atur_tm'])){
-    $id = $_POST['id'];
-    $tm_date = $_POST['tm_date'];
-    $tm_time = $_POST['tm_time'];
-    $tm_location = $_POST['tm_location'];
+    $id = mysqli_real_escape_string($koneksi, $_POST['id']);
+    $tm_date = mysqli_real_escape_string($koneksi, $_POST['tm_date']);
+    $tm_time = mysqli_real_escape_string($koneksi, $_POST['tm_time']);
+    $tm_location = mysqli_real_escape_string($koneksi, $_POST['tm_location']);
 
-    $query = "UPDATE bookings SET status = 'TM Terjadwal', tm_date='$tm_date', tm_time='$tm_time', tm_location='$tm_location' WHERE id = '$id'";
+    $query = "UPDATE bookings SET 
+              status = 'TM Terjadwal', 
+              tm_date='$tm_date', 
+              tm_time='$tm_time', 
+              tm_location='$tm_location' 
+              WHERE id = '$id'";
+    
     mysqli_query($koneksi, $query);
     echo "<script>alert('Jadwal TM Tersimpan!'); window.location='booking.php';</script>";
 }
 
 // C. TM Selesai
 if(isset($_POST['step_tm_selesai'])){
-    $id = $_POST['id'];
-    $query = "UPDATE bookings SET status = 'Menunggu Acara' WHERE id = '$id'";
+    $id = mysqli_real_escape_string($koneksi, $_POST['id']);
+    $query = "UPDATE bookings SET status = 'TM Selesai' WHERE id = '$id'";
     mysqli_query($koneksi, $query);
     echo "<script>alert('TM Selesai. Menunggu Hari H.'); window.location='booking.php';</script>";
 }
 
-// D. Acara Selesai (Otomatis Lunas)
-if(isset($_POST['step_acara_selesai'])){
-    $id = $_POST['id'];
-    $query = "UPDATE bookings SET status = 'Acara Selesai', payment_status = 'Paid' WHERE id = '$id'";
+// D. Verifikasi Pelunasan (Dari Confirmed DP ke Confirmed Full)
+if(isset($_POST['step_verif_pelunasan'])){
+    $id = mysqli_real_escape_string($koneksi, $_POST['id']);
+    $waktu = date('Y-m-d H:i:s');
+    
+    $query = "UPDATE bookings SET 
+              payment_status = 'Confirmed Full',
+              admin_verified_at = '$waktu'
+              WHERE id = '$id'";
+    
     mysqli_query($koneksi, $query);
-    echo "<script>alert('Acara Selesai! Pembayaran otomatis diubah menjadi Lunas.'); window.location='booking.php';</script>";
+    echo "<script>alert('Pelunasan Diverifikasi!'); window.location='booking.php';</script>";
 }
 
-// E. Pelunasan Manual (Tanpa ubah status acara)
-if(isset($_POST['step_lunas'])){
-    $id = $_POST['id'];
-    $query = "UPDATE bookings SET payment_status = 'Paid' WHERE id = '$id'";
-    mysqli_query($koneksi, $query);
-    echo "<script>alert('Pembayaran Lunas!'); window.location='booking.php';</script>";
+// E. Acara Selesai
+if(isset($_POST['step_acara_selesai'])){
+    $id = mysqli_real_escape_string($koneksi, $_POST['id']);
+    
+    // Pastikan pembayaran sudah full
+    mysqli_query($koneksi, "UPDATE bookings SET 
+        status = 'Selesai', 
+        payment_status = 'Confirmed Full' 
+        WHERE id = '$id'");
+    
+    echo "<script>alert('Acara Selesai! Terima kasih.'); window.location='booking.php';</script>";
 }
 
 // F. Hapus Data
 if(isset($_POST['hapus_data'])){
-    $id = $_POST['id'];
+    $id = mysqli_real_escape_string($koneksi, $_POST['id']);
     mysqli_query($koneksi, "DELETE FROM bookings WHERE id = '$id'");
     echo "<script>alert('Data dihapus!'); window.location='booking.php';</script>";
 }
@@ -200,39 +222,88 @@ $query = mysqli_query($koneksi, "
                             </td>
 
                             <td>
-                                <div style="font-size:0.75rem; font-weight:bold; color:#334155; text-align:center; margin-bottom:5px;">
-                                    <?= $data['status']; ?>
-                                </div>
+    <!-- Status Display -->
+    <div style="background:#f8fafc; padding:10px; border-radius:8px; margin-bottom:10px;">
+        <small style="display:block; color:#64748b; font-size:0.7rem; font-weight:600;">STATUS PEMBAYARAN</small>
+        <strong style="color:#2563eb; font-size:0.8rem;"><?= $data['payment_status']; ?></strong>
+    </div>
+    <div style="background:#f0fdf4; padding:10px; border-radius:8px; margin-bottom:10px;">
+        <small style="display:block; color:#64748b; font-size:0.7rem; font-weight:600;">STATUS ACARA</small>
+        <strong style="color:#16a34a; font-size:0.8rem;"><?= $data['status']; ?></strong>
+    </div>
 
-                                <?php if($data['status'] == 'Menunggu Pembayaran' || $data['status'] == 'Menunggu Konfirmasi' || $data['status'] == 'Pending'): ?>
-                                    <button onclick="openModal('modal-verif-<?= $data['id'] ?>')" class="wf-btn btn-step-1">
-                                        <i class="ri-check-line"></i> Verifikasi
-                                    </button>
-
-                                <?php elseif($data['status'] == 'Menunggu Jadwal TM'): ?>
-                                    <button onclick="openModal('modal-tm-<?= $data['id'] ?>')" class="wf-btn btn-step-2">
-                                        <i class="ri-calendar-event-fill"></i> Atur TM
-                                    </button>
-
-                                <?php elseif($data['status'] == 'TM Terjadwal'): ?>
-                                    <small style="display:block; text-align:center; color:#059669; font-size:0.7rem; margin-bottom:3px;">
-                                        <?= date('d/m', strtotime($data['tm_date'])); ?> @ <?= $data['tm_time']; ?>
-                                    </small>
-                                    <button onclick="openModal('modal-tm-done-<?= $data['id'] ?>')" class="wf-btn btn-step-3">
-                                        <i class="ri-discuss-line"></i> TM Selesai
-                                    </button>
-
-                                <?php elseif($data['status'] == 'Menunggu Acara'): ?>
-                                    <button onclick="openModal('modal-acara-done-<?= $data['id'] ?>')" class="wf-btn btn-step-4">
-                                        <i class="ri-flag-2-fill"></i> Selesaikan Acara
-                                    </button>
-
-                                <?php elseif($data['status'] == 'Acara Selesai' || $data['status'] == 'Selesai'): ?>
-                                    <button class="wf-btn btn-done">
-                                        <i class="ri-checkbox-circle-line"></i> COMPLETED
-                                    </button>
-                                <?php endif; ?>
-                            </td>
+    <!-- Action Buttons -->
+    <?php
+    $ps = $data['payment_status']; // Payment Status
+    $es = $data['status']; // Event Status
+    
+    // STEP 1: Verifikasi Pembayaran Pertama
+    if(($ps == 'Confirmed DP' || $ps == 'Confirmed Full') && $es == 'Menunggu Jadwal TM' && empty($data['admin_verified_at'])) {
+        ?>
+        <button onclick="openModal('modal-verif-<?= $data['id'] ?>')" class="wf-btn btn-step-1">
+            <i class="ri-check-line"></i> Verifikasi Bayar
+        </button>
+        <?php
+    }
+    // STEP 2: Atur Jadwal TM
+    elseif($ps != 'Menunggu Pembayaran' && $es == 'Menunggu Jadwal TM' && !empty($data['admin_verified_at'])) {
+        ?>
+        <button onclick="openModal('modal-tm-<?= $data['id'] ?>')" class="wf-btn btn-step-2">
+            <i class="ri-calendar-event-fill"></i> Atur Jadwal TM
+        </button>
+        <?php
+    }
+    // STEP 3: TM Terjadwal - Tampilkan Info + Button TM Selesai
+    elseif($es == 'TM Terjadwal') {
+        ?>
+        <small style="display:block; text-align:center; color:#059669; font-size:0.7rem; margin-bottom:5px;">
+            📅 <?= date('d/m', strtotime($data['tm_date'])); ?> @ <?= $data['tm_time']; ?>
+        </small>
+        <button onclick="openModal('modal-tm-done-<?= $data['id'] ?>')" class="wf-btn btn-step-3">
+            <i class="ri-discuss-line"></i> TM Selesai
+        </button>
+        
+        <!-- Jika masih DP, munculkan tombol verifikasi pelunasan -->
+        <?php if($ps == 'Confirmed DP' || $ps == 'Menunggu Verifikasi Pelunasan'): ?>
+            <button onclick="openModal('modal-pelunasan-<?= $data['id'] ?>')" class="wf-btn" style="background:#16a34a; margin-top:5px;">
+                <i class="ri-money-dollar-circle-line"></i> Verif Pelunasan
+            </button>
+        <?php endif; ?>
+        <?php
+    }
+    // STEP 4: TM Selesai - Menunggu Acara
+    elseif($es == 'TM Selesai') {
+        ?>
+        <button onclick="openModal('modal-acara-done-<?= $data['id'] ?>')" class="wf-btn btn-step-4">
+            <i class="ri-flag-2-fill"></i> Selesaikan Acara
+        </button>
+        
+        <!-- Tombol Pelunasan jika masih DP -->
+        <?php if($ps == 'Confirmed DP' || $ps == 'Menunggu Verifikasi Pelunasan'): ?>
+            <button onclick="openModal('modal-pelunasan-<?= $data['id'] ?>')" class="wf-btn" style="background:#16a34a; margin-top:5px;">
+                <i class="ri-money-dollar-circle-line"></i> Verif Pelunasan
+            </button>
+        <?php endif; ?>
+        <?php
+    }
+    // FINAL: Acara Selesai
+    elseif($es == 'Selesai') {
+        ?>
+        <button class="wf-btn btn-done">
+            <i class="ri-checkbox-circle-line"></i> COMPLETED
+        </button>
+        <?php
+    }
+    // DEFAULT: Masih Pending
+    else {
+        ?>
+        <button class="wf-btn" style="background:#94a3b8; cursor:default;" disabled>
+            <i class="ri-time-line"></i> Menunggu Customer
+        </button>
+        <?php
+    }
+    ?>
+</td>
 
                             <td class="action-icons">
                                 <a href="booking_edit.php?id=<?= $data['id']; ?>" class="btn-edit" title="Edit"><i class="ri-pencil-line"></i></a>
@@ -300,17 +371,30 @@ $query = mysqli_query($koneksi, "
                             </div>
                         </div>
 
-                        <div id="modal-lunas-<?= $data['id'] ?>" class="modal-overlay">
-                            <div class="modal-card">
-                                <i class="ri-close-line close-modal" onclick="closeModal('modal-lunas-<?= $data['id'] ?>')"></i>
-                                <div class="modal-title">Pelunasan Pembayaran</div>
-                                <p style="color:#64748b;">Ubah status pembayaran menjadi <b>Lunas (Paid)</b>?</p>
-                                <form method="POST">
-                                    <input type="hidden" name="id" value="<?= $data['id']; ?>">
-                                    <button type="submit" name="step_lunas" class="btn-modal-submit" style="background:#be185d;">Konfirmasi Lunas</button>
-                                </form>
-                            </div>
-                        </div>
+                        <!-- MODAL VERIFIKASI PELUNASAN -->
+<div id="modal-pelunasan-<?= $data['id'] ?>" class="modal-overlay">
+    <div class="modal-card">
+        <i class="ri-close-line close-modal" onclick="closeModal('modal-pelunasan-<?= $data['id'] ?>')"></i>
+        <div class="modal-title">Verifikasi Pelunasan</div>
+        <p style="color:#64748b;">Konfirmasi bahwa customer <strong><?= $data['client_name']; ?></strong> telah melunasi pembayaran?</p>
+        
+        <div style="background:#fef3c7; padding:15px; border-radius:8px; margin:15px 0; border-left:4px solid #f59e0b;">
+            <strong style="color:#92400e;">Info Pembayaran:</strong><br>
+            <small style="color:#78350f;">
+                Total: Rp <?= number_format($data['total_price'], 0, ',', '.'); ?><br>
+                DP Dibayar: Rp <?= number_format($data['down_payment_amount'], 0, ',', '.'); ?><br>
+                <strong>Sisa: Rp <?= number_format($data['total_price'] - $data['down_payment_amount'], 0, ',', '.'); ?></strong>
+            </small>
+        </div>
+        
+        <form method="POST">
+            <input type="hidden" name="id" value="<?= $data['id']; ?>">
+            <button type="submit" name="step_verif_pelunasan" class="btn-modal-submit" style="background:#16a34a;">
+                ✓ Ya, Pelunasan Sudah Masuk
+            </button>
+        </form>
+    </div>
+</div>
 
                         <?php endwhile; ?>
                     <?php else: ?>

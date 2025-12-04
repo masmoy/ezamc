@@ -1,15 +1,45 @@
 <?php
 require_once 'config/database.php';
 
-// A. LOGIKA KONFIRMASI PEMBAYARAN OLEH CUSTOMER
+// A. LOGIKA KONFIRMASI PEMBAYARAN PERTAMA (DP/Full)
 if (isset($_POST['konfirmasi_bayar'])) {
-    $kode = $_POST['kode_booking'];
-    // Update status agar Admin tahu user sudah bayar
-    mysqli_query($koneksi, "UPDATE bookings SET status = 'Menunggu Konfirmasi' WHERE booking_code = '$kode'");
-    echo "<script>alert('Konfirmasi terkirim! Admin akan segera memverifikasi pembayaran Anda.'); window.location='index.php#status-result';</script>";
+    $kode = mysqli_real_escape_string($koneksi, $_POST['kode_booking']);
+    $waktu = date('Y-m-d H:i:s');
+    
+    // Ambil data booking untuk cek jenis pembayaran
+    $q = mysqli_query($koneksi, "SELECT payment_option FROM bookings WHERE booking_code = '$kode'");
+    $d = mysqli_fetch_assoc($q);
+    
+    if($d['payment_option'] == 'Down Payment') {
+        $new_payment_status = 'Confirmed DP';
+    } else {
+        $new_payment_status = 'Confirmed Full';
+    }
+    
+    // Update status
+    mysqli_query($koneksi, "UPDATE bookings SET 
+        payment_status = '$new_payment_status', 
+        status = 'Menunggu Jadwal TM',
+        payment_confirmed_at = '$waktu'
+        WHERE booking_code = '$kode'");
+    
+    echo "<script>alert('Konfirmasi pembayaran terkirim! Admin akan segera memverifikasi.'); window.location='index.php#status-result';</script>";
 }
 
-// B. LOGIKA CEK STATUS
+// B. LOGIKA KONFIRMASI PELUNASAN (Dari DP ke Full)
+if (isset($_POST['konfirmasi_pelunasan'])) {
+    $kode = mysqli_real_escape_string($koneksi, $_POST['kode_booking']);
+    $waktu = date('Y-m-d H:i:s');
+    
+    mysqli_query($koneksi, "UPDATE bookings SET 
+        payment_status = 'Menunggu Verifikasi Pelunasan',
+        payment_confirmed_at = '$waktu'
+        WHERE booking_code = '$kode'");
+    
+    echo "<script>alert('Konfirmasi pelunasan terkirim! Admin akan segera memverifikasi.'); window.location='index.php#status-result';</script>";
+}
+
+// B. LOGIKA CEK STATUS BOOKING
 $status_result = null;
 if (isset($_POST['check_status'])) {
     $email = mysqli_real_escape_string($koneksi, $_POST['email']);
@@ -17,81 +47,122 @@ if (isset($_POST['check_status'])) {
     $data = mysqli_fetch_assoc($q_status);
     
     if ($data) {
-        // Tentukan Progress Bar & Pesan
+        // --- LOGIKA PROGRESS BAR ---
         $progress = 10;
-        $status_msg = "Booking diterima, silakan lakukan pembayaran.";
-        $class_status = "text-red";
+        $payment_label = $data['payment_status'];
+        $event_label = $data['status'];
+        $info_message = "";
+        $btn_confirm = false;
+        $show_pelunasan = false;
         
-        // Logika Tampilan Berdasarkan Status
-        if($data['status'] == 'Menunggu Pembayaran') { 
-            $progress = 10; 
-            $status_msg = "Menunggu Pembayaran & Konfirmasi Anda.";
-            $btn_confirm = true; // Munculkan tombol konfirmasi
+        // Tentukan progress berdasarkan kombinasi status
+        if($data['payment_status'] == 'Menunggu Pembayaran' && $data['status'] == 'Pending') {
+            $progress = 10;
+            $info_message = "Silakan lakukan pembayaran dan klik tombol konfirmasi di bawah.";
+            $btn_confirm = true;
         }
-        elseif($data['status'] == 'Menunggu Konfirmasi') { 
-            $progress = 25; 
-            $status_msg = "Sedang diverifikasi oleh Admin."; 
-            $btn_confirm = false;
-        }
-        elseif($data['status'] == 'Menunggu Jadwal TM') { 
-            $progress = 40; 
-            $status_msg = "Pembayaran Diterima. Menunggu jadwal TM dari Admin."; 
-        }
-        elseif($data['status'] == 'TM Terjadwal') { 
-            $progress = 60; 
-            $status_msg = "Jadwal TM: ".date('d M Y', strtotime($data['tm_date']))." jam ".$data['tm_time']." di ".$data['tm_location']; 
-        }
-        elseif($data['status'] == 'Menunggu Acara') { 
-            $progress = 80; 
-            $status_msg = "TM Selesai. Bersiap menuju Hari H!"; 
-        }
-        elseif($data['status'] == 'Acara Selesai' || $data['status'] == 'Selesai') { 
-            $progress = 100; 
-            $status_msg = "Acara Telah Selesai. Terima kasih!"; 
+        elseif($data['payment_status'] == 'Confirmed DP' || $data['payment_status'] == 'Confirmed Full') {
+            if($data['status'] == 'Menunggu Jadwal TM') {
+                $progress = 30;
+                $info_message = "Pembayaran Anda sedang diverifikasi admin. Mohon tunggu jadwal Technical Meeting.";
+            }
+            elseif($data['status'] == 'TM Terjadwal') {
+                $progress = 50;
+                $tm_info = date('d M Y', strtotime($data['tm_date']))." pukul ".$data['tm_time']." di ".$data['tm_location'];
+                $info_message = "Technical Meeting dijadwalkan: <strong>".$tm_info."</strong>";
+                
+                // Jika DP, tampilkan info pelunasan
+                if($data['payment_status'] == 'Confirmed DP') {
+                    $sisa = $data['total_price'] - $data['down_payment_amount'];
+                    $info_message .= "<br><br>⚠️ <strong>Sisa Pelunasan:</strong> Rp ".number_format($sisa, 0, ',', '.')."<br><small>Harap lunasi H-5 sebelum acara.</small>";
+                    $show_pelunasan = true;
+                }
+            }
+            elseif($data['status'] == 'TM Selesai') {
+                $progress = 70;
+                $info_message = "Technical Meeting selesai. Bersiap untuk hari H!";
+                
+                if($data['payment_status'] == 'Confirmed DP') {
+                    $sisa = $data['total_price'] - $data['down_payment_amount'];
+                    $info_message .= "<br><br>⚠️ <strong>Sisa Pelunasan:</strong> Rp ".number_format($sisa, 0, ',', '.')."<br><small>Harap lunasi segera.</small>";
+                    $show_pelunasan = true;
+                }
+            }
+            elseif($data['status'] == 'Selesai') {
+                $progress = 100;
+                $info_message = "Acara telah selesai. Terima kasih atas kepercayaan Anda! 🎉";
+            }
         }
 
-        // Render HTML Card Timeline
+        // --- RENDER HTML CARD ---
         $status_html = '
-        <div style="background:white; color:#333; padding:30px; border-radius:15px; margin-top:30px; text-align:left; box-shadow:0 10px 40px rgba(0,0,0,0.2); position:relative;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:15px;">
+        <div style="background:white; color:#333; padding:30px; border-radius:15px; margin-top:30px; text-align:left; box-shadow:0 10px 40px rgba(0,0,0,0.2);">
+            
+            <!-- Header Info -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:2px solid #f1f5f9; padding-bottom:15px;">
                 <div>
-                    <h3 style="color:#0f172a; margin:0; font-size:1.2rem;">'.$data['event_name'].'</h3>
-                    <small style="color:#64748b;">Kode: <b>'.$data['booking_code'].'</b></small>
-                </div>
-                <div style="text-align:right;">
-                    <span style="display:block; font-weight:bold; color:#14b8a6;">'.$data['payment_status'].'</span>
-                    <small>'.$data['payment_option'].'</small>
+                    <h3 style="color:#0f172a; margin:0; font-size:1.3rem;">'.$data['event_name'].'</h3>
+                    <small style="color:#64748b;">Kode: <b>'.$data['booking_code'].'</b></small><br>
+                    <small style="color:#64748b;">Tanggal Acara: <b>'.date('d M Y', strtotime($data['event_date'])).'</b></small>
                 </div>
             </div>
 
-            <div style="background:#f1f5f9; height:8px; border-radius:5px; margin:25px 0; overflow:hidden;">
-                <div style="background:#14b8a6; height:100%; width:'.$progress.'%; transition:1s;"></div>
+            <!-- Status Grid -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:25px;">
+                <div style="background:#eff6ff; padding:15px; border-radius:10px; border-left:4px solid #2563eb;">
+                    <small style="color:#64748b; font-weight:600; display:block; margin-bottom:5px;">STATUS PEMBAYARAN</small>
+                    <strong style="color:#1e40af; font-size:1rem;">'.$payment_label.'</strong>
+                </div>
+                <div style="background:#f0fdf4; padding:15px; border-radius:10px; border-left:4px solid #16a34a;">
+                    <small style="color:#64748b; font-weight:600; display:block; margin-bottom:5px;">STATUS ACARA</small>
+                    <strong style="color:#166534; font-size:1rem;">'.$event_label.'</strong>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div style="background:#f1f5f9; height:10px; border-radius:5px; margin:25px 0; overflow:hidden;">
+                <div style="background:linear-gradient(to right, #14b8a6, #0d9488); height:100%; width:'.$progress.'%; transition:1s;"></div>
             </div>
             
-            <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:#94a3b8; font-weight:600; text-transform:uppercase;">
+            <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:#94a3b8; font-weight:600; text-transform:uppercase; margin-bottom:25px;">
                 <span>Booking</span>
-                <span>Verifikasi</span>
+                <span>Bayar</span>
                 <span>TM</span>
                 <span>Acara</span>
                 <span>Selesai</span>
             </div>
 
-            <div style="background:#eff6ff; padding:20px; border-radius:10px; border-left:5px solid #2563eb; margin-top:25px;">
-                <strong style="display:block; color:#1e40af; margin-bottom:5px; font-size:0.9rem;">Status Terkini:</strong>
-                <p style="margin:0; color:#334155; font-size:1rem;">'.$status_msg.'</p>
+            <!-- Info Message -->
+            <div style="background:#fef3c7; padding:20px; border-radius:10px; border-left:5px solid #f59e0b;">
+                <strong style="display:block; color:#92400e; margin-bottom:8px; font-size:0.9rem;">ℹ️ Informasi Terkini:</strong>
+                <p style="margin:0; color:#78350f; line-height:1.6;">'.$info_message.'</p>
             </div>';
 
-            // Jika status masih Menunggu Pembayaran, munculkan tombol Konfirmasi
-            if(isset($btn_confirm) && $btn_confirm == true){
+            // Tombol Konfirmasi Pembayaran (Muncul jika belum bayar)
+            if($btn_confirm){
                 $status_html .= '
                 <div style="margin-top:20px; text-align:center;">
                     <form method="POST">
                         <input type="hidden" name="kode_booking" value="'.$data['booking_code'].'">
-                        <button type="submit" name="konfirmasi_bayar" style="background:#f59e0b; color:white; border:none; padding:12px 25px; border-radius:30px; font-weight:bold; cursor:pointer; width:100%; transition:0.3s;">
-                            <i class="ri-check-double-line"></i> Saya Sudah Bayar (Konfirmasi)
+                        <button type="submit" name="konfirmasi_bayar" style="background:#f59e0b; color:white; border:none; padding:14px 30px; border-radius:8px; font-weight:700; cursor:pointer; width:100%; transition:0.3s; font-size:1rem;">
+                            <i class="ri-check-double-line"></i> Saya Sudah Transfer (Konfirmasi Sekarang)
                         </button>
                     </form>
-                    <small style="display:block; margin-top:10px; color:#64748b;">Klik tombol di atas jika sudah transfer DP/Full.</small>
+                    <small style="display:block; margin-top:10px; color:#64748b;">Klik tombol di atas setelah Anda transfer DP/Full Payment.</small>
+                </div>';
+            }
+
+            // Tombol Konfirmasi Pelunasan (Muncul jika DP dan TM sudah terjadwal)
+            if($show_pelunasan){
+                $status_html .= '
+                <div style="margin-top:20px; text-align:center;">
+                    <form method="POST">
+                        <input type="hidden" name="kode_booking" value="'.$data['booking_code'].'">
+                        <button type="submit" name="konfirmasi_pelunasan" style="background:#16a34a; color:white; border:none; padding:14px 30px; border-radius:8px; font-weight:700; cursor:pointer; width:100%; transition:0.3s; font-size:1rem;">
+                            <i class="ri-money-dollar-circle-line"></i> Saya Sudah Melunasi
+                        </button>
+                    </form>
+                    <small style="display:block; margin-top:10px; color:#64748b;">Klik jika Anda sudah melakukan pelunasan.</small>
                 </div>';
             }
 

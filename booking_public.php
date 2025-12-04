@@ -58,9 +58,8 @@ if (isset($_POST['booking'])) {
 
     $booking_code = "BOOK-" . date('ymd') . rand(100, 999);
     
-    // Status Awal Baru: Menunggu Pembayaran
-    $status_awal = 'Menunggu Pembayaran';
-    $payment_status_db = 'Unpaid'; 
+    $status_awal = 'Pending'; // Status Acara
+$payment_status_db = 'Menunggu Pembayaran'; // Status Pembayaran
 
     $query = "INSERT INTO bookings (
                 booking_code, client_name, client_email, client_phone, 
